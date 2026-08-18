@@ -596,7 +596,10 @@ def test_qwen_target_verify_quantized_linear_matches_singleton_batch_path():
     linear.biases = linear.biases.astype(mx.bfloat16)
     x = mx.random.normal((1, 3, 512)).astype(mx.bfloat16)
 
-    ref = linear(x)
+    # The kernel replaces the per-token singleton loop, so that loop is the
+    # reference. Batched linear(x) is not: MLX's qmm and qmv reduce in
+    # different orders and disagree by a few bfloat16 ulps on GPU.
+    ref = qwen_language._target_verify_timewise(linear, x)
     out = qwen_language._target_verify_quantized_linear(linear, x)
     mx.eval(ref, out)
 
